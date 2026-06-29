@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TRUE GOD SERVER MODE</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #0b1220;
+      color: white;
+      text-align: center;
+    }
+
+    h1 { margin-top: 15px; }
+
+    input {
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      margin: 5px;
+    }
+
+    button {
+      padding: 10px 14px;
+      margin: 5px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .click { background: #2563eb; color: white; }
+    .shop { background: #22c55e; color: white; }
+
+    .wrap {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .box {
+      background: rgba(255,255,255,0.05);
+      padding: 10px;
+      border-radius: 10px;
+      width: 250px;
+      text-align: left;
+    }
+
+    .score {
+      font-size: 26px;
+      margin: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🌐 TRUE GOD SERVER MODE</h1>
+
+<input id="nameInput" placeholder="Username" />
+
+<div class="score">
+Score: <span id="score">0</span>
+</div>
+
+<button class="click" onclick="clickMe()">CLICK</button>
+<button class="shop" onclick="buyPower()">+POWER</button>
+<button class="shop" onclick="buyAuto()">+AUTO</button>
+
+<div class="wrap">
+
+  <div class="box">
+    <h3>🏆 Leaderboard</h3>
+    <div id="board">Loading...</div>
+  </div>
+
+  <div class="box">
+    <h3>💬 Chat</h3>
+
+    <div id="chat"
+         style="height:120px; overflow:auto; border:1px solid #333; padding:5px;">
+    </div>
+
+    <input id="msg" placeholder="Message" />
+    <button onclick="sendMsg()">Send</button>
+  </div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  onSnapshot,
+  addDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import {
+  getAuth,
+  signInAnonymously,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// 🔥 FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let uid;
+let score = 0;
+let power = 1;
+let auto = 0;
+let name = "Player";
+
+// 🔐 LOGIN
+signInAnonymously(auth);
+
+onAuthStateChanged(auth, async (user) => {
+  uid = user.uid;
+
+  const ref = doc(db, "players", uid);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    let d = snap.data();
+    score = d.score || 0;
+    power = d.power || 1;
+    auto = d.auto || 0;
+    name = d.name || "Player";
+
+    document.getElementById("nameInput").value = name;
+  } else {
+    await setDoc(ref, {
+      name,
+      score: 0,
+      power: 1,
+      auto: 0
+    });
+  }
+
+  update();
+  startAuto();
+  leaderboard();
+  chat();
+});
+
+// 💾 SAVE
+async function save() {
+  const ref = doc(db, "players", uid);
+
+  await updateDoc(ref, {
+    name: document.getElementById("nameInput").value || "Player",
+    score,
+    power,
+    auto
+  });
+}
+
+// 🎮 CLICK
+function clickMe() {
+  score += power;
+  update();
+  save();
+}
+
+// 💪 POWER
+function buyPower() {
+  if (score >= 10) {
+    score -= 10;
+    power++;
+    update();
+    save();
+  }
+}
+
+// 🤖 AUTO
+function buyAuto() {
+  if (score >= 25) {
+    score -= 25;
+    auto++;
+    update();
+    save();
+  }
+}
+
+// ⏱ AUTO LOOP
+function startAuto() {
+  setInterval(() => {
+    score += auto;
+    update();
+    save();
+  }, 1000);
+}
+
+// 📊 UI
+function update() {
+  document.getElementById("score").innerText = score;
+}
+
+// 🏆 LEADERBOARD
+function leaderboard() {
+  onSnapshot(collection(db, "players"), (snap) => {
+    let list = [];
+
+    snap.forEach(d => list.push(d.data()));
+
+    list.sort((a,b) => b.score - a.score);
+
+    document.getElementById("board").innerHTML =
+      list.slice(0,5).map(p =>
+        `<div>⭐ ${p.name}: ${p.score}</div>`
+      ).join("");
+  });
+}
+
+// 💬 CHAT (FIXED)
+function chat() {
+  onSnapshot(collection(db, "chat"), (snap) => {
+    let html = "";
+
+    snap.forEach(d => {
+      let c = d.data();
+      html += `<div><b>${c.name}:</b> ${c.msg}</div>`;
+    });
+
+    document.getElementById("chat").innerHTML = html;
+  });
+}
+
+// ✅ FIXED SEND MESSAGE
+async function sendMsg() {
+  let msg = document.getElementById("msg").value;
+  if (!msg) return;
+
+  await addDoc(collection(db, "chat"), {
+    name: document.getElementById("nameInput").value || "Player",
+    msg
+  });
+
+  document.getElementById("msg").value = "";
+}
+
+// ⭐ IMPORTANT FIX (THIS WAS MISSING BEFORE)
+window.clickMe = clickMe;
+window.buyPower = buyPower;
+window.buyAuto = buyAuto;
+window.sendMsg = sendMsg;
+
+</script>
+
+</body>
+</html>
