@@ -1,7 +1,7 @@
 📌 PROJECT DESCRIPTION
 
 A browser-based incremental clicker game built using HTML, CSS, JavaScript, and Firebase.
-The application supports real-time multiplayer synchronization, allowing multiple users to interact with shared data such as scores, upgrades, and leaderboard rankings. MADE USING VS CODE WITH FLASK APP INSTALLATION
+The application supports real-time multiplayer synchronization, allowing multiple users to interact with shared data such as scores, upgrades, and leaderboard rankings. MADE USING VS CODE WITH FLASK APP INSTALLATION. You can play my game here: https://clicker-game-v3.onrender.com
 
 The system uses Firebase Authentication and Firestore to manage user sessions and persist game state across devices.
 
